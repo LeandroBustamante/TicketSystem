@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Entradas - TicketUNAJ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1 class="display-4">Reserva de Entradas</h1>
+            <p class="text-muted">Proyecto de Software - Cátedra Leonardo Julian Cabral</p>
+        </div>
+
+        <div id="message-box" class="alert d-none mb-4" role="alert"></div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">1. Seleccionar Evento</h5>
+                        <select id="event-select" class="form-select" onchange="loadSectors(this.value)">
+                            <option value="">-- Seleccioná un evento --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">2. Seleccionar Sector</h5>
+                        <select id="sector-select" class="form-select" disabled onchange="loadSeats(this.value)">
+                            <option value="">Primero elegí un evento</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">3. Mapa de Asientos</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div id="seat-map-container" class="py-4">
+                            <p id="map-placeholder" class="text-muted">Seleccioná un sector para ver las butacas disponibles.</p>
+                            <div id="seat-map" class="seat-grid"></div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white d-flex justify-content-center gap-4">
+                        <div class="d-flex align-items-center"><div class="legend-box available"></div> Disponible</div>
+                        <div class="d-flex align-items-center"><div class="legend-box reserved"></div> Reservado</div>
+                        <div class="d-flex align-items-center"><div class="legend-box sold"></div> Vendido</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="javascript/app.js"></script>
+</body>
+</html>

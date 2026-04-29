@@ -1,0 +1,54 @@
+.seat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 10px;
+    justify-items: center;
+}
+
+.seat {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .seat:hover:not(.reserved):not(.sold) {
+        transform: scale(1.1);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+/* COLORES SEGUN TUS ESTADOS DEL BACKEND */
+.available {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.reserved {
+    background-color: #fff3cd;
+    color: #856404;
+    border-color: #ffeeba;
+    cursor: not-allowed;
+}
+
+.sold {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+    cursor: not-allowed;
+}
+
+.legend-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 8px;
+    border: 1px solid #dee2e6;
+}
