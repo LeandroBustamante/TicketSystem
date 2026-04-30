@@ -13,6 +13,7 @@ async function loadEvents() {
         events.forEach(e => {
             const option = document.createElement('option');
             option.value = e.id;
+
             // MAPEADO CON LAS PROPIEDADES DEL DTO EVENTRESPONSE
             option.textContent = `${e.name} - ${e.venue}`;
             select.appendChild(option);
@@ -36,6 +37,7 @@ async function loadSectors(eventId) {
         select.disabled = false;
         select.innerHTML = '<option value="">-- Seleccioná un sector --</option>';
         sectors.forEach(s => {
+
             // MAPEADO CON LAS PROPIEDADES DEL DTO SECTORRESPONSE
             select.innerHTML += `<option value="${s.id}">${s.name} ($${s.price})</option>`;
         });
@@ -59,10 +61,12 @@ async function loadSeats(sectorId) {
             const statusClass = s.status.toLowerCase();
             const btn = document.createElement('div');
             btn.className = `seat ${statusClass}`;
+
             // MAPEADO CON SEATNUMBER DEL SEATRESPONSE
             btn.innerText = s.seatNumber; 
 
             if (statusClass === 'available') {
+
                 // PASAMOS EL ID Y LA VERSIÓN PARA EL OPTIMISTIC LOCKING
                 btn.onclick = () => reserveSeat(s.id, s.version, btn);
             }
@@ -79,10 +83,12 @@ async function reserveSeat(seatId, version, element) {
     element.onclick = null;
 
     try {
+
         // LA URL DEBE COINCIDIR CON EL ROUTE DEL EVENTSCONTROLLER
         const response = await fetch(`${API_URL}/events/seats/reserve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+
             // ENVIAMOS EL OBJETO TAL CUAL LO ESPERA EL RESERVESEATCOMMAND
             body: JSON.stringify({ 
                 userId: 1, 
@@ -99,6 +105,7 @@ async function reserveSeat(seatId, version, element) {
         } else {
             const err = await response.json();
             showError(err.message || "La butaca ya no está disponible.");
+
             // RECARGAMOS EL MAPA PARA ACTUALIZAR ESTADOS Y VERSIONES
             loadSeats(document.getElementById('sector-select').value);
         }
