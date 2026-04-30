@@ -7,11 +7,11 @@ public interface ISeatRepository
     Task<IEnumerable<Seat>> GetBySectorIdAsync(int sectorId);
     Task<Seat?> GetByIdAsync(Guid id);
 
-    // Metodos para preparar los cambios en memoria
+    // Nuevo método para validar existencia del sector
+    Task<bool> SectorExistsAsync(int sectorId);
+
     void Update(Seat seat);
     void AddReservation(Reservation reservation);
     void AddAuditLog(Audit_Log log);
-
-    // Persiste toda la unidad de trabajo en una sola transacción
     Task<int> SaveChangesAsync();
 }

@@ -12,21 +12,28 @@ public class GetSeatsBySectorIdHandler : IGetSeatsBySectorIdHandler
         _repository = repository;
     }
 
-    public async Task<IEnumerable<SeatResponse>> HandleAsync(GetSeatsBySectorIdQuery query)
+    public async Task<IEnumerable<SeatResponse>?> HandleAsync(GetSeatsBySectorIdQuery query)
     {
-        // Obtenemos las butacas de la base de datos
+        // 1. Validamos si el sector existe
+        var sectorExists = await _repository.SectorExistsAsync(query.SectorId);
+
+        if (!sectorExists)
+        {
+            return null; // Devolvemos null para que el Controller sepa que es un 404
+        }
+
+        // 2. Si existe, obtenemos las butacas
         var seats = await _repository.GetBySectorIdAsync(query.SectorId);
 
-
-        // Mapeamos a DTOs para informar el estado (Available, Reserved, Sold) al Front
         return seats.Select(s => new SeatResponse
         {
             Id = s.Id,
             RowIdentifier = s.RowIdentifier,
             SeatNumber = s.SeatNumber,
             Status = s.Status,
-            // Mapeamos la versión hacia el dto para el frontend
             Version = s.Version
         });
     }
+
+
 }

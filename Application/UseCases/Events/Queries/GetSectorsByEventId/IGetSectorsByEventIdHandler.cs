@@ -4,5 +4,7 @@ namespace Application.UseCases.Sectors.Queries.GetSectorsByEventId;
 
 public interface IGetSectorsByEventIdHandler
 {
-    Task<IEnumerable<SectorResponse>> HandleAsync(GetSectorsByEventIdQuery query);
+    // Agregamos el "?" para permitir el retorno de null
+    Task<IEnumerable<SectorResponse>?> HandleAsync(GetSectorsByEventIdQuery query);
+   
 }

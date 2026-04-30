@@ -49,4 +49,10 @@ public class SeatRepository : ISeatRepository
         // SE EJECUTAN TODAS LAS OPERACIONES JUNTAS. SI UNA FALLA, HAY ROLLBACK 
         return await _context.SaveChangesAsync();
     }
+
+    public async Task<bool> SectorExistsAsync(int sectorId)
+    {
+        // Verificamos en la tabla de Sectores si existe el ID
+        return await _context.Sectors.AnyAsync(s => s.Id == sectorId);
+    }
 }

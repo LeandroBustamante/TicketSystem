@@ -40,8 +40,16 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> GetSectors(int id)
     {
         var result = await _getSectorsHandler.HandleAsync(new GetSectorsByEventIdQuery(id));
+
+        // Si el handler nos devuelve null, es porque el evento no existe
+        if (result == null)
+        {
+            return NotFound(new { message = $"El evento con ID {id} no existe." });
+        }
+
         return Ok(result);
     }
+
 
 
     // 3. Listar estado de asientos de un sector (Mapa de asientos) 
@@ -50,6 +58,12 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> GetSeats(int sectorId)
     {
         var result = await _getSeatsHandler.HandleAsync(new GetSeatsBySectorIdQuery(sectorId));
+
+        if (result == null)
+        {
+            return NotFound(new { message = $"El sector con ID {sectorId} no existe." });
+        }
+
         return Ok(result);
     }
 

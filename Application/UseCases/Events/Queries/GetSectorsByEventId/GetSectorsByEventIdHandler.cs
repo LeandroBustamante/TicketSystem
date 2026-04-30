@@ -3,6 +3,7 @@ using Application.Interfaces;
 
 namespace Application.UseCases.Sectors.Queries.GetSectorsByEventId;
 
+
 public class GetSectorsByEventIdHandler : IGetSectorsByEventIdHandler
 {
     private readonly IEventRepository _repository;
@@ -12,13 +13,20 @@ public class GetSectorsByEventIdHandler : IGetSectorsByEventIdHandler
         _repository = repository;
     }
 
-    public async Task<IEnumerable<SectorResponse>> HandleAsync(GetSectorsByEventIdQuery query)
+    public async Task<IEnumerable<SectorResponse>?> HandleAsync(GetSectorsByEventIdQuery query)
     {
-        // Buscamos los sectores asociados al evento
+        // 1. Verificamos si el evento existe en la DB
+        var eventEntity = await _repository.GetByIdAsync(query.EventId);
+
+        // 2. Si el evento no existe, devolvemos null para señalizar el 404
+        if (eventEntity == null)
+        {
+            return null;
+        }
+
+        // 3. Si existe, buscamos sus sectores
         var sectors = await _repository.GetSectorsByEventIdAsync(query.EventId);
 
-
-        // Mapeamos a DTOs de salida
         return sectors.Select(s => new SectorResponse
         {
             Id = s.Id,
