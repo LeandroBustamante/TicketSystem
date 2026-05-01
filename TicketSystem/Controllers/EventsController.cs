@@ -26,11 +26,15 @@ public class EventsController : ControllerBase
     }
 
 
-    // 1. Listar todos los eventos (Catálogo inicial) 
+    // 1. Listar todos los eventos (Catálogo inicial)
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _getAllEventsHandler.HandleAsync(new GetAllEventsQuery());
+        var result = await _getAllEventsHandler.HandleAsync(new GetAllEventsQuery
+        {
+            Page = page,
+            PageSize = pageSize
+        });
         return Ok(result);
     }
 

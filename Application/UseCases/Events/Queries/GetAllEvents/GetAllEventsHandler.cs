@@ -18,6 +18,10 @@ public class GetAllEventsHandler : IGetAllEventsHandler
         // 1. Buscamos las entidades en la base de datos
         var events = await _repository.GetAllAsync();
 
+        // Aplicamos paginación
+        var paginatedEvents = events
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize);
 
         // 2. Mapeamos las entidades a DTOs de respuesta
         return events.Select(e => new EventResponse
@@ -25,7 +29,8 @@ public class GetAllEventsHandler : IGetAllEventsHandler
             Id = e.Id,
             Name = e.Name,
             EventDate = e.EventDate,
-            Venue = e.Venue
+            Venue = e.Venue,
+            Status = e.Status
         });
     }
 }
