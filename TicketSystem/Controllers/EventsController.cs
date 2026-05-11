@@ -1,7 +1,9 @@
-﻿using Application.UseCases.Events.Queries.GetAllEvents;
-using Application.UseCases.Sectors.Queries.GetSectorsByEventId;
-using Application.UseCases.Seats.Queries.GetSeatsBySectorId;
+﻿using Application.Interfaces;
+using Application.UseCases.Events.Queries.GetAllEvents;
+using Application.UseCases.Seats.Commands.PayReservation;
 using Application.UseCases.Seats.Commands.ReserveSeat;
+using Application.UseCases.Seats.Queries.GetSeatsBySectorId;
+using Application.UseCases.Sectors.Queries.GetSectorsByEventId;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.Controllers;
@@ -10,6 +12,7 @@ namespace Presentation.Controllers;
 [Route("api/v1/events")] // URL base siguiendo estándar REST 
 public class EventsController : ControllerBase
 {
+    private readonly IPayReservationHandler _payReservationHandler;
     private readonly IGetAllEventsHandler _getAllEventsHandler;
     private readonly IGetSectorsByEventIdHandler _getSectorsHandler;
     private readonly IGetSeatsBySectorIdHandler _getSeatsHandler;
@@ -17,12 +20,13 @@ public class EventsController : ControllerBase
 
     public EventsController(IGetAllEventsHandler getAllEventsHandler, IGetSectorsByEventIdHandler getSectorsHandler,
         IGetSeatsBySectorIdHandler getSeatsHandler,
-        IReserveSeatHandler reserveSeatHandler)
+        IReserveSeatHandler reserveSeatHandler, IPayReservationHandler payReservationHandler)
     {
         _getAllEventsHandler = getAllEventsHandler;
         _getSectorsHandler = getSectorsHandler;
         _getSeatsHandler = getSeatsHandler;
         _reserveSeatHandler = reserveSeatHandler;
+        _payReservationHandler = payReservationHandler;
     }
 
 
@@ -76,14 +80,44 @@ public class EventsController : ControllerBase
     [HttpPost("seats/reserve")]
     public async Task<IActionResult> Reserve([FromBody] ReserveSeatCommand command)
     {
-        var success = await _reserveSeatHandler.HandleAsync(command);
+        var reservationId = await _reserveSeatHandler.HandleAsync(command);
 
-        if (!success)
+        if (reservationId == null)
         {
             // Si falla por concurrencia o disponibilidad, devolvemos 409 Conflict 
             return Conflict(new { message = "La butaca no está disponible o ya fue reservada por otro usuario." });
         }
 
-        return Ok(new { message = "Reserva realizada con éxito. Tenés 5 minutos para pagar." });
+        return Ok(new
+        {
+            message = "Reserva realizada con éxito. Tenés 5 minutos para pagar.",
+            reservationId = reservationId
+        });
+    }
+
+    // 5. Confirmar pago de una reserva
+    [HttpPost("reservations/{reservationId}/pay")]
+    public async Task<IActionResult> Pay(Guid reservationId, [FromBody] PayReservationCommand command)
+    {
+        // Asignamos el ID de la URL al command
+        command.ReservationId = reservationId;
+
+        var result = await _payReservationHandler.HandleAsync(command);
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == "NOT_FOUND")
+                return NotFound(new { message = result.Message });
+
+            if (result.ErrorCode == "EXPIRED")
+                return Conflict(new { message = result.Message });
+
+            if (result.ErrorCode == "PAYMENT_REJECTED")
+                return StatusCode(402, new { message = result.Message });
+
+            return StatusCode(500, new { message = result.Message });
+        }
+
+        return Ok(new { message = result.Message });
     }
 }

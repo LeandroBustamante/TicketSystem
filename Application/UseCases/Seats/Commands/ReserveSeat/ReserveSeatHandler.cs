@@ -12,7 +12,7 @@ public class ReserveSeatHandler : IReserveSeatHandler
         _repository = repository;
     }
 
-    public async Task<bool> HandleAsync(ReserveSeatCommand command)
+    public async Task<Guid?> HandleAsync(ReserveSeatCommand command)
     {
         // 1. Obtener la butaca
         var seat = await _repository.GetByIdAsync(command.SeatId);
@@ -22,7 +22,7 @@ public class ReserveSeatHandler : IReserveSeatHandler
         // Si la versión en db es distinta a la que mandó el front, alguien cambió el asiento
         if (seat == null || seat.Status != "Available" || seat.Version != command.Version)
         {
-            return false;
+            return null;
         }
 
 
@@ -67,12 +67,12 @@ public class ReserveSeatHandler : IReserveSeatHandler
         try
         {
             await _repository.SaveChangesAsync();
-            return true;
+            return reservation.Id;
         }
         catch (Exception)
         {
             // Si falla cualquier parte, ef core no persiste nada (rollback automático)
-            return false;
+            return null;
         }
     }
 }

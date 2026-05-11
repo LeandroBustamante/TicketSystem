@@ -1,6 +1,7 @@
 // 1. Agregamos los usings necesarios para encontrar el contexto y EF Core
 using Application.Interfaces;
 using Application.UseCases.Events.Queries.GetAllEvents;
+using Application.UseCases.Seats.Commands.PayReservation;
 using Application.UseCases.Seats.Commands.ReserveSeat;
 using Application.UseCases.Seats.Queries.GetSeatsBySectorId;
 using Application.UseCases.Sectors.Queries.GetSectorsByEventId;
@@ -36,7 +37,17 @@ builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<ISeatRepository, SeatRepository>();
 
 
-// REGISTRO DE HANDLERS (CASOS DE USO) 
+// REGISTRO DE HANDLERS (CASOS DE USO)
+
+// REGISTRO DEL REPOSITORIO DE RESERVAS
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+
+// REGISTRO DEL HANDLER DE PAGO
+builder.Services.AddScoped<IPayReservationHandler, PayReservationHandler>();
+
+// REGISTRO DEL BACKGROUND JOB
+builder.Services.AddHostedService<Infrastructure.BackgroundJobs.ReservationExpiryJob>();
+
 builder.Services.AddScoped<IGetAllEventsHandler, GetAllEventsHandler>();
 builder.Services.AddScoped<IGetSectorsByEventIdHandler, GetSectorsByEventIdHandler>();
 builder.Services.AddScoped<IGetSeatsBySectorIdHandler, GetSeatsBySectorIdHandler>();
