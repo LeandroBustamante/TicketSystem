@@ -1,5 +1,11 @@
 const API_URL = "https://localhost:7223/api/v1";
 
+// ==================== NUEVO: VARIABLES GLOBALES ====================
+let countdownInterval = null;
+let activeReservationId = null;
+let activeUserId = 1;
+// ==================== FIN NUEVO ====================
+
 document.addEventListener("DOMContentLoaded", () => {
     loadEvents();
 });
@@ -68,7 +74,7 @@ async function loadSeats(sectorId) {
             if (statusClass === 'available') {
 
                 // PASAMOS EL ID Y LA VERSIÓN PARA EL OPTIMISTIC LOCKING
-                btn.onclick = () => reserveSeat(s.id, s.version, btn);
+                btn.onclick = () => reserveSeat(s.id, s.version, btn, s.seatNumber);
             }
             map.appendChild(btn);
         });
@@ -77,7 +83,8 @@ async function loadSeats(sectorId) {
     }
 }
 
-async function reserveSeat(seatId, version, element) {
+// CAMBIO: agregamos el parámetro seatNumber a la firma
+async function reserveSeat(seatId, version, element, seatNumber) {
     const originalText = element.innerText;
     element.innerText = '...';
     element.onclick = null;
@@ -99,12 +106,23 @@ async function reserveSeat(seatId, version, element) {
 
         if (response.ok) {
             const res = await response.json();
-            showSuccess(res.message);
+            // CAMBIO: guardamos el reservationId y mostramos el carrito
+            activeReservationId = res.reservationId;
             element.className = 'seat reserved';
             element.innerText = originalText;
+            showCart(seatNumber);
+            showSuccess(res.message);
         } else {
-            const err = await response.json();
-            showError(err.message || "La butaca ya no está disponible.");
+            element.className = 'seat reserved';
+            element.innerText = originalText;
+
+            // CAMBIO: si es 409 mostramos el toast, sino el mensaje de error
+            if (response.status === 409) {
+                showConflictToast();
+            } else {
+                const err = await response.json();
+                showError(err.message || "La butaca ya no está disponible.");
+            }
 
             // RECARGAMOS EL MAPA PARA ACTUALIZAR ESTADOS Y VERSIONES
             loadSeats(document.getElementById('sector-select').value);
@@ -114,6 +132,78 @@ async function reserveSeat(seatId, version, element) {
         element.innerText = originalText;
     }
 }
+
+// ==================== NUEVO: FUNCIONES DE CARRITO Y TEMPORIZADOR ====================
+
+function showCart(seatNumber) {
+    document.getElementById('cart-seat-info').innerText = `Butaca ${seatNumber}`;
+    document.getElementById('cart-panel').classList.remove('d-none');
+    startCountdown(5 * 60);
+}
+
+function startCountdown(seconds) {
+    if (countdownInterval) clearInterval(countdownInterval);
+    const countdownEl = document.getElementById('countdown');
+    let remaining = seconds;
+
+    countdownInterval = setInterval(() => {
+        const minutes = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        countdownEl.innerText = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (remaining <= 0) {
+            clearInterval(countdownInterval);
+            hideCart();
+            showError("⏰ Tu reserva expiró. La butaca fue liberada.");
+            loadSeats(document.getElementById('sector-select').value);
+        }
+        remaining--;
+    }, 1000);
+}
+
+async function confirmPayment() {
+    if (!activeReservationId) return;
+    const payBtn = document.getElementById('pay-btn');
+    payBtn.disabled = true;
+    payBtn.innerText = 'Procesando...';
+
+    try {
+        const response = await fetch(`${API_URL}/events/reservations/${activeReservationId}/pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: activeUserId })
+        });
+
+        if (response.ok) {
+            clearInterval(countdownInterval);
+            hideCart();
+            showSuccess("✅ ¡Pago confirmado! Disfrutá el evento.");
+            loadSeats(document.getElementById('sector-select').value);
+        } else {
+            const err = await response.json();
+            showError(err.message || "Error al procesar el pago.");
+            payBtn.disabled = false;
+            payBtn.innerText = '💳 Confirmar Pago';
+        }
+    } catch (err) {
+        showError("Error de comunicación al pagar.");
+        payBtn.disabled = false;
+        payBtn.innerText = '💳 Confirmar Pago';
+    }
+}
+
+function hideCart() {
+    document.getElementById('cart-panel').classList.add('d-none');
+    activeReservationId = null;
+}
+
+function showConflictToast() {
+    const toastEl = document.getElementById('conflict-toast');
+    const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    toast.show();
+}
+
+// ==================== FIN NUEVO ====================
 
 function showSuccess(msg) {
     const box = document.getElementById('message-box');
