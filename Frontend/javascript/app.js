@@ -55,7 +55,7 @@ async function loadSectors(eventId) {
 async function loadSeats(sectorId) {
     if (!sectorId) return;
     try {
-        const response = await fetch(`${API_URL}/events/sectors/${sectorId}/seats`);
+        const response = await fetch(`${API_URL}/sectors/${sectorId}/seats`);
         const seats = await response.json();
         const map = document.getElementById('seat-map');
         const placeholder = document.getElementById('map-placeholder');
@@ -74,7 +74,7 @@ async function loadSeats(sectorId) {
             if (statusClass === 'available') {
 
                 // PASAMOS EL ID Y LA VERSIÓN PARA EL OPTIMISTIC LOCKING
-                btn.onclick = () => reserveSeat(s.id, s.version, btn, s.seatNumber);
+                btn.onclick = () => reserveSeat(s.id, s.version, btn, s.seatNumber, sectorId);
             }
             map.appendChild(btn);
         });
@@ -84,7 +84,7 @@ async function loadSeats(sectorId) {
 }
 
 // CAMBIO: agregamos el parámetro seatNumber a la firma
-async function reserveSeat(seatId, version, element, seatNumber) {
+async function reserveSeat(seatId, version, element, seatNumber, sectorId) {
     const originalText = element.innerText;
     element.innerText = '...';
     element.onclick = null;
@@ -92,7 +92,7 @@ async function reserveSeat(seatId, version, element, seatNumber) {
     try {
 
         // LA URL DEBE COINCIDIR CON EL ROUTE DEL EVENTSCONTROLLER
-        const response = await fetch(`${API_URL}/events/seats/reserve`, {
+        const response = await fetch(`${API_URL}/sectors/${sectorId}/seats/reserve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
 
@@ -168,7 +168,7 @@ async function confirmPayment() {
     payBtn.innerText = 'Procesando...';
 
     try {
-        const response = await fetch(`${API_URL}/events/reservations/${activeReservationId}/pay`, {
+        const response = await fetch(`${API_URL}/reservations/${activeReservationId}/pay`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: activeUserId })

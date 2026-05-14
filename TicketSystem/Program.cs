@@ -8,6 +8,7 @@ using Application.UseCases.Sectors.Queries.GetSectorsByEventId;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Presentation.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +66,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 
 // ACTIVACIÓN DE CORS (NOTA: DEBE IR DESPUÉS DE HTTPS REDIRECTION Y ANTES DE AUTHORIZATION)
