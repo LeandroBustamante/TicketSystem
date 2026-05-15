@@ -12,29 +12,81 @@ public class ReserveSeatHandler : IReserveSeatHandler
         _repository = repository;
     }
 
-    public async Task<Guid?> HandleAsync(ReserveSeatCommand command)
+    public async Task<ReserveSeatResult> HandleAsync(ReserveSeatCommand command)
     {
         // 1. Obtener la butaca
         var seat = await _repository.GetByIdAsync(command.SeatId);
 
-
-        // Validar disponibilidad y versión (optimistic locking)
-        // Si la versión en db es distinta a la que mandó el front, alguien cambió el asiento
-        if (seat == null || seat.Status != "Available" || seat.Version != command.Version)
+        // Caso: la butaca no existe → 404
+        if (seat == null)
         {
-            return null;
+            _repository.AddAuditLog(new Audit_Log
+            {
+                Id = Guid.NewGuid(),
+                UserId = command.UserId,
+                Action = "RESERVE_FAILED_NOT_FOUND",
+                EntityType = "Seat",
+                EntityId = command.SeatId.ToString(),
+                Details = $"INTENTO FALLIDO: LA BUTACA {command.SeatId} NO EXISTE",
+                CreatedAt = DateTime.Now
+            });
+            await _repository.SaveChangesAsync();
+            return new ReserveSeatResult
+            {
+                Success = false,
+                ErrorCode = "NOT_FOUND",
+                Message = "La butaca no existe."
+            };
         }
 
+        // Caso: la butaca no está disponible → 409
+        if (seat.Status != "Available")
+        {
+            _repository.AddAuditLog(new Audit_Log
+            {
+                Id = Guid.NewGuid(),
+                UserId = command.UserId,
+                Action = "RESERVE_FAILED_UNAVAILABLE",
+                EntityType = "Seat",
+                EntityId = seat.Id.ToString(),
+                Details = $"INTENTO FALLIDO: BUTACA {seat.SeatNumber} EN ESTADO {seat.Status}",
+                CreatedAt = DateTime.Now
+            });
+            await _repository.SaveChangesAsync();
+            return new ReserveSeatResult
+            {
+                Success = false,
+                ErrorCode = "UNAVAILABLE",
+                Message = "La butaca no está disponible."
+            };
+        }
+
+        // Caso: versión incorrecta → 409
+        if (seat.Version != command.Version)
+        {
+            _repository.AddAuditLog(new Audit_Log
+            {
+                Id = Guid.NewGuid(),
+                UserId = command.UserId,
+                Action = "RESERVE_FAILED_CONCURRENCY",
+                EntityType = "Seat",
+                EntityId = seat.Id.ToString(),
+                Details = $"INTENTO FALLIDO: CONFLICTO DE VERSIÓN EN BUTACA {seat.SeatNumber} (ESPERADA: {command.Version}, ACTUAL: {seat.Version})",
+                CreatedAt = DateTime.Now
+            });
+            await _repository.SaveChangesAsync();
+            return new ReserveSeatResult
+            {
+                Success = false,
+                ErrorCode = "CONCURRENCY",
+                Message = "La butaca fue modificada por otro usuario. Intentá nuevamente."
+            };
+        }
 
         // 2. Modificar estado en memoria
         seat.Status = "Reserved";
-
-
-        // Incrementamos la versión manualmente para el próximo control
         seat.Version++;
-
         _repository.Update(seat);
-
 
         // 3. Preparar reserva
         var reservation = new Reservation
@@ -48,9 +100,8 @@ public class ReserveSeatHandler : IReserveSeatHandler
         };
         _repository.AddReservation(reservation);
 
-
-        // 4. Preparar log de auditoría
-        var log = new Audit_Log
+        // 4. Auditoría del camino feliz
+        _repository.AddAuditLog(new Audit_Log
         {
             Id = Guid.NewGuid(),
             UserId = command.UserId,
@@ -59,20 +110,27 @@ public class ReserveSeatHandler : IReserveSeatHandler
             EntityId = seat.Id.ToString(),
             Details = $"RESERVA CREADA: BUTACA {seat.SeatNumber} SECTOR {seat.SectorId} VERSIÓN {seat.Version}",
             CreatedAt = DateTime.Now
-        };
-        _repository.AddAuditLog(log);
+        });
 
-
-        // 5. Intentar persistencia total (atomicidad)
+        // 5. Persistencia total (atomicidad)
         try
         {
             await _repository.SaveChangesAsync();
-            return reservation.Id;
+            return new ReserveSeatResult
+            {
+                Success = true,
+                ReservationId = reservation.Id,
+                Message = "Reserva realizada con éxito. Tenés 5 minutos para pagar."
+            };
         }
         catch (Exception)
         {
-            // Si falla cualquier parte, ef core no persiste nada (rollback automático)
-            return null;
+            return new ReserveSeatResult
+            {
+                Success = false,
+                ErrorCode = "DB_ERROR",
+                Message = "Error al guardar la reserva. Intentá nuevamente."
+            };
         }
     }
 }

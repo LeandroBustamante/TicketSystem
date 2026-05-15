@@ -13,14 +13,14 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadEvents() {
     try {
         const response = await fetch(`${API_URL}/events`);
-        const events = await response.json();
+        const result = await response.json();
         const select = document.getElementById('event-select');
-        
-        events.forEach(e => {
+
+        // ANTES: events.forEach(...)
+        // AHORA: result.data.forEach(...) porque la respuesta es paginada
+        result.data.forEach(e => {
             const option = document.createElement('option');
             option.value = e.id;
-
-            // MAPEADO CON LAS PROPIEDADES DEL DTO EVENTRESPONSE
             option.textContent = `${e.name} - ${e.venue}`;
             select.appendChild(option);
         });

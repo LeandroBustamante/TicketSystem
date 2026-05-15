@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.DTOs;
+using Application.Interfaces;
 using Application.UseCases.Seats.Commands.ReserveSeat;
 using Application.UseCases.Seats.Queries.GetSeatsBySectorId;
 using Microsoft.AspNetCore.Mvc;
@@ -36,16 +37,26 @@ public class SeatsController : ControllerBase
     [HttpPost("{sectorId}/seats/reserve")]
     public async Task<IActionResult> Reserve(int sectorId, [FromBody] ReserveSeatCommand command)
     {
-        var reservationId = await _reserveSeatHandler.HandleAsync(command);
+        var result = await _reserveSeatHandler.HandleAsync(command);
 
-        if (reservationId == null)
-            return Conflict(new { message = "La butaca no está disponible o ya fue reservada por otro usuario." });
+        if (!result.Success)
+        {
+            // La butaca no existe → 404
+            if (result.ErrorCode == "NOT_FOUND")
+                return NotFound(new { message = result.Message });
+
+            // La butaca no está disponible o hay conflicto de concurrencia → 409
+            if (result.ErrorCode == "UNAVAILABLE" || result.ErrorCode == "CONCURRENCY")
+                return Conflict(new { message = result.Message });
+
+            return StatusCode(500, new { message = result.Message });
+        }
 
         return CreatedAtAction(nameof(GetSeats), new { sectorId },
-            new
+            new ReservationResponse
             {
-                message = "Reserva realizada con éxito. Tenés 5 minutos para pagar.",
-                reservationId
+                ReservationId = result.ReservationId ?? Guid.Empty,
+                Message = result.Message
             });
     }
 }

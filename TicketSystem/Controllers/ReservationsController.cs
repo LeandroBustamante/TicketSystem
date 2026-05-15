@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.DTOs;
+using Application.Interfaces;
 using Application.UseCases.Seats.Commands.PayReservation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,6 +38,7 @@ public class ReservationsController : ControllerBase
             return StatusCode(500, new { message = result.Message });
         }
 
-        return Ok(new { message = result.Message });
+        return Ok(new PaymentResponse { Message = result.Message });
+
     }
 }

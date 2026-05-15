@@ -1,9 +1,9 @@
 ﻿using Application.DTOs;
+using Application.UseCases.Events.Queries.GetAllEvents;
 
-namespace Application.UseCases.Events.Queries.GetAllEvents;
+namespace Application.Interfaces;
 
 public interface IGetAllEventsHandler
 {
-    // El método recibe la Query y devuelve una lista de DTOs de respuesta
-    Task<IEnumerable<EventResponse>> HandleAsync(GetAllEventsQuery query);
+    Task<PagedResponse<EventResponse>> HandleAsync(GetAllEventsQuery query);
 }
