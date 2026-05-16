@@ -26,12 +26,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Reservation>().ToTable("RESERVATION");
         modelBuilder.Entity<Audit_Log>().ToTable("AUDIT_LOG");
 
-
         // CONFIGURACIÓN DE SEAT (BUTACA) 
         modelBuilder.Entity<Seat>(entity =>
         {
-            // EL CAMPO VERSION SE USA PARA OPTIMISTIC LOCKING 
-            // USAMOS ISCONCURRENCYTOKEN PORQUE ES UN INT Y NO UN ROWVERSION DE SQL SERVER
+            // El campo Version se usa para Optimistic Locking.
+            // IsConcurrencyToken indica a EF Core que debe incluirlo en el WHERE al actualizar,
+            // garantizando que dos usuarios no pisen el mismo registro al mismo tiempo.
             entity.Property(s => s.Version).IsConcurrencyToken();
 
             // RELACIÓN: UN SECTOR TIENE MUCHAS BUTACAS 
@@ -39,7 +39,6 @@ public class AppDbContext : DbContext
                   .WithMany(sector => sector.Seats)
                   .HasForeignKey(s => s.SectorId);
         });
-
 
         // CONFIGURACIÓN DE SECTOR
         modelBuilder.Entity<Sector>(entity =>
@@ -53,7 +52,6 @@ public class AppDbContext : DbContext
                   .HasForeignKey(s => s.EventId);
         });
 
-
         // CONFIGURACIÓN DE RESERVATION 
         modelBuilder.Entity<Reservation>(entity =>
         {
@@ -61,18 +59,47 @@ public class AppDbContext : DbContext
             entity.HasOne(r => r.Seat).WithMany().HasForeignKey(r => r.SeatId);
         });
 
-
         // CONFIGURACIÓN DE AUDIT_LOG 
         modelBuilder.Entity<Audit_Log>(entity =>
         {
-            // USERID ES OPCIONAL SI LA ACCIÓN ES DEL SISTEMA 
+            // UserId es opcional cuando la acción la ejecuta el sistema (ej: Background Job)
             entity.HasOne(a => a.User)
                   .WithMany(u => u.Audit_Logs)
                   .HasForeignKey(a => a.UserId)
                   .IsRequired(false);
         });
 
+        // ÍNDICES PARA MEJORAR PERFORMANCE EN CONSULTAS FRECUENTES
 
+        // Índice en Seat por SectorId — se consulta frecuentemente para renderizar el mapa
+        modelBuilder.Entity<Seat>()
+            .HasIndex(s => s.SectorId)
+            .HasDatabaseName("IX_Seat_SectorId");
+
+        // Índice en Seat por Status — se filtra por estado en queries de disponibilidad
+        modelBuilder.Entity<Seat>()
+            .HasIndex(s => s.Status)
+            .HasDatabaseName("IX_Seat_Status");
+
+        // Índice en Reservation por SeatId — se consulta para verificar reservas activas
+        modelBuilder.Entity<Reservation>()
+            .HasIndex(r => r.SeatId)
+            .HasDatabaseName("IX_Reservation_SeatId");
+
+        // Índice en Reservation por Status y ExpiresAt — el background job lo usa para buscar reservas vencidas
+        modelBuilder.Entity<Reservation>()
+            .HasIndex(r => new { r.Status, r.ExpiresAt })
+            .HasDatabaseName("IX_Reservation_Status_ExpiresAt");
+
+        // Índice en Audit_Log por EntityId — se consulta para ver el historial de una entidad
+        modelBuilder.Entity<Audit_Log>()
+            .HasIndex(a => a.EntityId)
+            .HasDatabaseName("IX_AuditLog_EntityId");
+
+        // Índice en Sector por EventId — se consulta para listar sectores de un evento
+        modelBuilder.Entity<Sector>()
+            .HasIndex(s => s.EventId)
+            .HasDatabaseName("IX_Sector_EventId");
 
         // PRECARGA DE DATOS (SEEDING) 
         var userId = 1;
@@ -89,7 +116,7 @@ public class AppDbContext : DbContext
         {
             Id = eventId,
             Name = "Concierto de Rock",
-            EventDate = new DateTime(2026, 05, 20), // USAR FECHA FIJA PARA EVITAR CAMBIOS EN MIGRACIONES
+            EventDate = new DateTime(2026, 05, 20),
             Venue = "Estadio Unaj",
             Status = "Active"
         });
@@ -101,15 +128,13 @@ public class AppDbContext : DbContext
             new Sector { Id = sectorBId, EventId = eventId, Name = "Campo General", Price = 3000, Capacity = 50 }
         );
 
-        // SEEDING DE BUTACAS: USAR IDS FIJOS PARA QUE LA MIGRACIÓN NO FALLE SIEMPRE
         var seats = new List<Seat>();
 
-        // SECTOR A
+        // SECTOR A — 50 butacas fila A
         for (int i = 1; i <= 50; i++)
         {
             seats.Add(new Seat
             {
-                // GENERAR GUID ESTÁTICO BASADO EN EL ÍNDICE PARA EVITAR NUEVOS IDS CADA VEZ QUE SE COMPILA
                 Id = new Guid($"00000000-0000-0000-0000-0000000000{i:D2}"),
                 SectorId = sectorAId,
                 RowIdentifier = "A",
@@ -119,7 +144,7 @@ public class AppDbContext : DbContext
             });
         }
 
-        // SECTOR B
+        // SECTOR B — 50 butacas fila B
         for (int i = 1; i <= 50; i++)
         {
             seats.Add(new Seat

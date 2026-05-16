@@ -7,6 +7,7 @@ namespace Presentation.Controllers;
 
 [ApiController]
 [Route("api/v1/reservations")]
+[Tags("Reservations")]
 public class ReservationsController : ControllerBase
 {
     private readonly IPayReservationHandler _payReservationHandler;
@@ -16,8 +17,17 @@ public class ReservationsController : ControllerBase
         _payReservationHandler = payReservationHandler;
     }
 
-    // POST /api/v1/reservations/{reservationId}/pay
+    /// <summary>
+    /// Confirma el pago de una reserva activa. Cambia el asiento a Sold y la reserva a Completed bajo una transacción ACID. Si algo falla se ejecuta un rollback completo.
+    /// </summary>
+    /// <param name="reservationId">ID de la reserva a pagar</param>
+    /// <param name="command">Datos del pago (userId)</param>
+
     [HttpPost("{reservationId}/pay")]
+    [ProducesResponseType(typeof(PaymentResponse), 200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    [ProducesResponseType(402)]
     public async Task<IActionResult> Pay(Guid reservationId, [FromBody] PayReservationCommand command)
     {
         command.ReservationId = reservationId;
@@ -39,6 +49,5 @@ public class ReservationsController : ControllerBase
         }
 
         return Ok(new PaymentResponse { Message = result.Message });
-
     }
 }

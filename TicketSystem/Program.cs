@@ -56,7 +56,20 @@ builder.Services.AddScoped<IReserveSeatHandler, ReserveSeatHandler>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "TicketSystem API",
+        Version = "v1",
+        Description = "API REST para la plataforma de venta de entradas. Gestiona eventos, sectores, butacas y reservas con control de concurrencia."
+    });
+
+    // Habilita los comentarios XML en Swagger
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
+});
 
 var app = builder.Build();
 
