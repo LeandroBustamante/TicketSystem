@@ -21,13 +21,20 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
+        catch (Domain.Exceptions.ConcurrencyException ex)
+        {
+            // Conflicto de concurrencia — devolvemos 409 directamente
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = 409;
+            var response = new { status = 409, message = ex.Message };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error no manejado: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
     }
-
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";

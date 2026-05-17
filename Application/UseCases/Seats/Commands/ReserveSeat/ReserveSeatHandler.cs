@@ -123,6 +123,15 @@ public class ReserveSeatHandler : IReserveSeatHandler
                 Message = "Reserva realizada con éxito. Tenés 5 minutos para pagar."
             };
         }
+        catch (Domain.Exceptions.ConcurrencyException)
+        {
+            return new ReserveSeatResult
+            {
+                Success = false,
+                ErrorCode = "CONCURRENCY",
+                Message = "La butaca fue tomada por otro usuario. Intentá nuevamente."
+            };
+        }
         catch (Exception)
         {
             return new ReserveSeatResult

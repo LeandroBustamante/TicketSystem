@@ -28,7 +28,6 @@ public class SeatRepository : ISeatRepository
 
     public void Update(Seat seat)
     {
-        // EF Core incluirá el campo Version en el WHERE del UPDATE para detectar conflictos de concurrencia.
         _context.Seats.Update(seat);
     }
 
@@ -44,8 +43,19 @@ public class SeatRepository : ISeatRepository
 
     public async Task<int> SaveChangesAsync()
     {
-        // Persiste todas las operaciones pendientes en una sola transacción. Si algo falla, EF Core hace rollback automático.
-        return await _context.SaveChangesAsync();
+        try
+        {
+            return await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new Domain.Exceptions.ConcurrencyException("Conflicto de concurrencia al guardar.");
+        }
+        catch (DbUpdateException)
+        {
+            // DbUpdateException también puede indicar conflicto de concurrencia
+            throw new Domain.Exceptions.ConcurrencyException("Conflicto al guardar. La butaca puede haber sido tomada.");
+        }
     }
 
     public async Task<bool> SectorExistsAsync(int sectorId)
