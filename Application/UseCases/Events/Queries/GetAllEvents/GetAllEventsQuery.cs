@@ -1,7 +1,6 @@
 ﻿namespace Application.UseCases.Events.Queries.GetAllEvents;
 
-// Como no necesitamos parámetros para listar todo, la clase está vacía.
-// Solo sirve para identificar la intención del usuario.
+// Parámetros de paginación para el listado de eventos. Los valores por defecto evitan que el cliente tenga que enviarlos siempre
 public class GetAllEventsQuery
 {
     public int Page { get; set; } = 1;

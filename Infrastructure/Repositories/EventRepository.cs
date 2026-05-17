@@ -5,30 +5,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories;
 
-// Esta clase implementa la interfaz definida en Application
+// Accede a la base de datos a través del DbContext siguiendo el patrón Repository para desacoplar la capa de datos de la lógica de negocio.
 public class EventRepository : IEventRepository
 {
     private readonly AppDbContext _context;
 
-    // Inyectamos el DbContext para interactuar con SQL Server
     public EventRepository(AppDbContext context)
     {
         _context = context;
     }
 
-    // Obtiene todos los eventos de la tabla Events
     public async Task<IEnumerable<Event>> GetAllAsync()
     {
         return await _context.Events.ToListAsync();
     }
 
-    // Busca un evento por su ID
     public async Task<Event?> GetByIdAsync(int id)
     {
         return await _context.Events.FindAsync(id);
     }
 
-    // Filtra los sectores que pertenecen a un EventId específico
+    // Filtra por EventId en lugar de traer todos los sectores para evitar cargar datos innecesarios.
     public async Task<IEnumerable<Sector>> GetSectorsByEventIdAsync(int eventId)
     {
         return await _context.Sectors

@@ -28,31 +28,28 @@ public class SeatRepository : ISeatRepository
 
     public void Update(Seat seat)
     {
-        // MARCA LA ENTIDAD PARA ACTUALIZARSE Y PREPARA EL OPTIMISTIC LOCKING 
+        // EF Core incluirá el campo Version en el WHERE del UPDATE para detectar conflictos de concurrencia.
         _context.Seats.Update(seat);
     }
 
     public void AddReservation(Reservation reservation)
     {
-        // AGREGA AL CONTEXTO SIN IMPACTAR LA DB TODAVÍA
         _context.Reservations.Add(reservation);
     }
 
     public void AddAuditLog(Audit_Log log)
     {
-        // REGISTRO DE AUDITORÍA EN MEMORIA
         _context.Audit_Logs.Add(log);
     }
 
     public async Task<int> SaveChangesAsync()
     {
-        // SE EJECUTAN TODAS LAS OPERACIONES JUNTAS. SI UNA FALLA, HAY ROLLBACK 
+        // Persiste todas las operaciones pendientes en una sola transacción. Si algo falla, EF Core hace rollback automático.
         return await _context.SaveChangesAsync();
     }
 
     public async Task<bool> SectorExistsAsync(int sectorId)
     {
-        // Verificamos en la tabla de Sectores si existe el ID
         return await _context.Sectors.AnyAsync(s => s.Id == sectorId);
     }
 }

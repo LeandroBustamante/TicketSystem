@@ -18,7 +18,7 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // MAPEO DE TABLAS A MAYÚSCULAS
+        // Los nombres de tabla en mayúsculas siguen la convención del proyecto para distinguirlos visualmente en SQL Server.
         modelBuilder.Entity<Event>().ToTable("EVENT");
         modelBuilder.Entity<Sector>().ToTable("SECTOR");
         modelBuilder.Entity<Seat>().ToTable("SEAT");
@@ -26,82 +26,72 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Reservation>().ToTable("RESERVATION");
         modelBuilder.Entity<Audit_Log>().ToTable("AUDIT_LOG");
 
-        // CONFIGURACIÓN DE SEAT (BUTACA) 
         modelBuilder.Entity<Seat>(entity =>
         {
-            // El campo Version se usa para Optimistic Locking.
-            // IsConcurrencyToken indica a EF Core que debe incluirlo en el WHERE al actualizar,
-            // garantizando que dos usuarios no pisen el mismo registro al mismo tiempo.
+            // IsConcurrencyToken indica a EF Core que debe incluir Version en el WHERE al actualizar, garantizando que dos usuarios no pisen el mismo registro al mismo tiempo.
             entity.Property(s => s.Version).IsConcurrencyToken();
 
-            // RELACIÓN: UN SECTOR TIENE MUCHAS BUTACAS 
             entity.HasOne(s => s.Sector)
                   .WithMany(sector => sector.Seats)
                   .HasForeignKey(s => s.SectorId);
         });
 
-        // CONFIGURACIÓN DE SECTOR
         modelBuilder.Entity<Sector>(entity =>
         {
-            // PRECISIÓN PARA EL PRECIO DECIMAL 
+            // HasPrecision evita errores de redondeo en precios al mapear decimal a SQL Server.
             entity.Property(s => s.Price).HasPrecision(18, 2);
 
-            // RELACIÓN: UN EVENTO TIENE MUCHOS SECTORES
             entity.HasOne(s => s.Event)
                   .WithMany(e => e.Sectors)
                   .HasForeignKey(s => s.EventId);
         });
 
-        // CONFIGURACIÓN DE RESERVATION 
         modelBuilder.Entity<Reservation>(entity =>
         {
             entity.HasOne(r => r.User).WithMany(u => u.Reservations).HasForeignKey(r => r.UserId);
             entity.HasOne(r => r.Seat).WithMany().HasForeignKey(r => r.SeatId);
         });
 
-        // CONFIGURACIÓN DE AUDIT_LOG 
         modelBuilder.Entity<Audit_Log>(entity =>
         {
-            // UserId es opcional cuando la acción la ejecuta el sistema (ej: Background Job)
+            // UserId es opcional porque el Background Job registra acciones del sistema sin usuario asociado.
             entity.HasOne(a => a.User)
                   .WithMany(u => u.Audit_Logs)
                   .HasForeignKey(a => a.UserId)
                   .IsRequired(false);
         });
 
-        // ÍNDICES PARA MEJORAR PERFORMANCE EN CONSULTAS FRECUENTES
-
-        // Índice en Seat por SectorId — se consulta frecuentemente para renderizar el mapa
+        // Índice en Seat por SectorId — se consulta frecuentemente para renderizar el mapa de asientos.
         modelBuilder.Entity<Seat>()
             .HasIndex(s => s.SectorId)
             .HasDatabaseName("IX_Seat_SectorId");
 
-        // Índice en Seat por Status — se filtra por estado en queries de disponibilidad
+        // Índice en Seat por Status — se filtra por estado en queries de disponibilidad.
         modelBuilder.Entity<Seat>()
             .HasIndex(s => s.Status)
             .HasDatabaseName("IX_Seat_Status");
 
-        // Índice en Reservation por SeatId — se consulta para verificar reservas activas
+        // Índice en Reservation por SeatId — se consulta para verificar reservas activas sobre una butaca.
         modelBuilder.Entity<Reservation>()
             .HasIndex(r => r.SeatId)
             .HasDatabaseName("IX_Reservation_SeatId");
 
-        // Índice en Reservation por Status y ExpiresAt — el background job lo usa para buscar reservas vencidas
+        // Índice compuesto en Reservation — el Background Job lo usa para buscar reservas vencidas eficientemente.
         modelBuilder.Entity<Reservation>()
             .HasIndex(r => new { r.Status, r.ExpiresAt })
             .HasDatabaseName("IX_Reservation_Status_ExpiresAt");
 
-        // Índice en Audit_Log por EntityId — se consulta para ver el historial de una entidad
+        // Índice en Audit_Log por EntityId — permite consultar el historial de auditoría de una entidad específica.
         modelBuilder.Entity<Audit_Log>()
             .HasIndex(a => a.EntityId)
             .HasDatabaseName("IX_AuditLog_EntityId");
 
-        // Índice en Sector por EventId — se consulta para listar sectores de un evento
+        // Índice en Sector por EventId — optimiza la query que lista sectores al seleccionar un evento.
         modelBuilder.Entity<Sector>()
             .HasIndex(s => s.EventId)
             .HasDatabaseName("IX_Sector_EventId");
 
-        // PRECARGA DE DATOS (SEEDING) 
+        // Datos de precarga fijos para garantizar que la aplicación arranque con datos válidos sin intervención manual.
         var userId = 1;
         modelBuilder.Entity<User>().HasData(new User
         {
@@ -130,7 +120,7 @@ public class AppDbContext : DbContext
 
         var seats = new List<Seat>();
 
-        // SECTOR A — 50 butacas fila A
+        // GUIDs fijos para que la migración sea idempotente y no genere IDs distintos en cada compilación.
         for (int i = 1; i <= 50; i++)
         {
             seats.Add(new Seat
@@ -144,7 +134,6 @@ public class AppDbContext : DbContext
             });
         }
 
-        // SECTOR B — 50 butacas fila B
         for (int i = 1; i <= 50; i++)
         {
             seats.Add(new Seat

@@ -1,21 +1,24 @@
 const API_URL = "https://localhost:7223/api/v1";
 
-// ==================== NUEVO: VARIABLES GLOBALES ====================
 let countdownInterval = null;
 let activeReservationId = null;
 let activeUserId = 1;
-// ==================== FIN NUEVO ====================
 
 document.addEventListener("DOMContentLoaded", () => {
     loadEvents();
 });
 
 async function loadEvents() {
+    const grid = document.getElementById('events-grid');
+    const loading = document.getElementById('events-loading');
+
+    // Mostramos el spinner mientras esperamos la respuesta
+    loading.classList.remove('d-none');
+    grid.innerHTML = '';
+
     try {
         const response = await fetch(`${API_URL}/events`);
         const result = await response.json();
-        const grid = document.getElementById('events-grid');
-        const loading = document.getElementById('events-loading');
 
         loading.classList.add('d-none');
 
@@ -30,7 +33,7 @@ async function loadEvents() {
             col.innerHTML = `
                 <div class="card h-100 shadow-sm event-card" onclick="selectEvent(${e.id}, '${e.name} - ${e.venue}')" style="cursor:pointer;">
                     <div class="card-body">
-                        <span class="badge bg-success mb-2">${e.status}</span>
+                        <span class="badge bg-success mb-2">${e.status === 'Active' ? 'Activo' : e.status}</span>
                         <h5 class="card-title">${e.name}</h5>
                         <p class="card-text text-muted mb-1">📍 ${e.venue}</p>
                         <p class="card-text text-muted small">📅 ${new Date(e.eventDate).toLocaleDateString('es-AR', { dateStyle: 'long' })}</p>
@@ -43,26 +46,34 @@ async function loadEvents() {
             grid.appendChild(col);
         });
     } catch (err) {
+        loading.classList.add('d-none');
         showError("No se pudo conectar con el servidor.");
-        document.getElementById('events-loading').classList.add('d-none');
     }
 }
 
 async function loadSectors(eventId) {
     const select = document.getElementById('sector-select');
+
     if (!eventId) {
         select.disabled = true;
         return;
     }
+
+    // Deshabilitamos el select y mostramos estado de carga mientras esperamos
+    select.disabled = true;
+    select.innerHTML = '<option value="">Cargando sectores...</option>';
+
     try {
         const response = await fetch(`${API_URL}/events/${eventId}/sectors`);
         const sectors = await response.json();
-        select.disabled = false;
+
         select.innerHTML = '<option value="">-- Seleccioná un sector --</option>';
         sectors.forEach(s => {
             select.innerHTML += `<option value="${s.id}">${s.name} ($${s.price})</option>`;
         });
+        select.disabled = false;
     } catch (err) {
+        select.innerHTML = '<option value="">Error al cargar sectores</option>';
         showError("Error al cargar sectores.");
     }
 }
@@ -83,12 +94,12 @@ async function loadSectors(eventId) {
                 const btn = document.createElement('div');
                 btn.className = `seat ${statusClass}`;
 
-                // MAPEADO CON SEATNUMBER DEL SEATRESPONSE
+                // El número de butaca es lo que ve el usuario en el mapa, no el ID interno.
                 btn.innerText = s.seatNumber;
 
                 if (statusClass === 'available') {
 
-                    // PASAMOS EL ID Y LA VERSIÓN PARA EL OPTIMISTIC LOCKING
+                    // Pasamos version para que el backend detecte conflictos si otro usuario modificó la butaca entre que se cargó el mapa y se hizo click.
                     btn.onclick = () => reserveSeat(s.id, s.version, btn, s.seatNumber, sectorId);
                 }
                 map.appendChild(btn);
@@ -153,8 +164,6 @@ async function loadSectors(eventId) {
             showError("Error de comunicación.");
         }
     }
-
-    // ==================== NUEVO: FUNCIONES DE CARRITO Y TEMPORIZADOR ====================
 
     function showCart(seatNumber) {
         document.getElementById('cart-seat-info').innerText = `Butaca ${seatNumber}`;
@@ -223,8 +232,6 @@ async function loadSectors(eventId) {
         const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
         toast.show();
     }
-
-    // ==================== FIN NUEVO ====================
 
     function selectEvent(eventId, eventName) {
         document.getElementById('catalog-view').classList.add('d-none');
